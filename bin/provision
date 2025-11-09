@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-
-set -x
-
-alias sed='gsed'
-
 stack="${1}"
 
 mkdir -p "/var/www/html/${stack}"
@@ -18,7 +13,6 @@ cd "/var/www/html/${stack}"
   root_password="$(openssl rand -hex 40)"
   user_password="$(openssl rand -hex 40)"
   read -r -p "Enter APP value: " app_value
-  read -r -p "Enter DOMAIN value: " domain_value
 
   ls -alih
 
@@ -26,12 +20,12 @@ cd "/var/www/html/${stack}"
   if sed --version >/dev/null 2>&1; then
     SED_INPLACE=(-i);
   else
-    SED_INPLACE=(-i ''); 
+    SED_INPLACE=(-i '');
   fi
 
   sed "${SED_INPLACE[@]}" \
     -e "s/REPLACE_APP/${app_value}/g" \
-    -e "s/REPLACE_DOMAIN/${domain_value}/g" \
+    -e "s/REPLACE_DOMAIN/${stack}/g" \
     -e "s/REPLACE_PASSWORD/${user_password}/g" \
     -e "s/REPLACE_ROOT_PASSWORD/${root_password}/g" \
     .env

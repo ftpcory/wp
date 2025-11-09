@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+stack="${1}"
+
+cd "/var/www/html/${stack}"
+source .env
+
+export APP="${APP}" DOMAIN_NAME="${DOMAIN_NAME}"
+docker stack deploy \
+  -c stack.yml \
+  --with-registry-auth \
+  --prune --detach=true \
+  "${APP}"
