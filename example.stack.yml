@@ -1,0 +1,84 @@
+
+x-common: &common
+  env_file: .env
+  logging:
+    options:
+      max-size: "200k"
+      max-file: "1"
+
+networks:
+  traefik-public:
+    external: true
+  net:
+    driver: overlay
+    attachable: true
+
+volumes:
+  db_data:
+  wp_data:
+  backups:
+
+services:
+  web:
+    <<: *common
+    image: ghcr.io/ftpcory/wp-web:stable
+    working_dir: /var/www/html/
+    hostname: "${DOMAIN_NAME}"
+    networks:
+      - net
+      - traefik-public
+    volumes:
+      - wp_data:/var/www/html
+    # Do NOT publish ports here; Traefik will reach it on the overlay network.
+    deploy:
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+
+        # HTTP -> HTTPS redirect
+        - "traefik.http.routers.${APP}-web.rule=Host(`${DOMAIN_NAME}`) || Host(`www.${DOMAIN_NAME}`)"
+        - "traefik.http.routers.${APP}-web.entrypoints=web"
+        - "traefik.http.routers.${APP}-web.middlewares=${APP}-https-redirect"
+        - "traefik.http.middlewares.${APP}-https-redirect.redirectscheme.scheme=https"
+
+        # HTTPS router
+        - "traefik.http.routers.${APP}.rule=Host(`${DOMAIN_NAME}`) || Host(`www.${DOMAIN_NAME}`)"
+        - "traefik.http.routers.${APP}.entrypoints=websecure"
+        - "traefik.http.routers.${APP}.tls=true"
+        - "traefik.http.routers.${APP}.tls.certresolver=letsencrypt"
+
+        # Service (internal port of your web container)
+        - "traefik.http.services.${APP}.loadbalancer.server.port=80"
+
+  db:
+    <<: *common
+    image: mariadb:10.9
+    networks:
+      - net
+    volumes:
+      - db_data:/var/lib/mysql
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  redis:
+    <<: *common
+    image: redis:7.0
+    networks:
+      - net
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  cron:
+    <<: *common
+    image: ghcr.io/ftpcory/wp-cron:stable
+    networks:
+      - net
+    volumes:
+      - backups:/var/backups/
+      - wp_data:/var/www/html
+    deploy:
+      restart_policy:
+        condition: on-failure
