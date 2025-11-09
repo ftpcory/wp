@@ -1,4 +1,4 @@
-FROM ghcr.io/ftpcory/docker-php-cli:7.4.x-dev
+FROM php:8.4-cli
 MAINTAINER corycollier@corycollier.com
 
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
@@ -11,7 +11,6 @@ COPY dotfiles/.* /root/
 COPY scripts/* /usr/local/bin
 
 USER www-data
-RUN crontab /app/cron-wordpress
 
 WORKDIR /app
 
