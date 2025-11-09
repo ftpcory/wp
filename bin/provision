@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -x
+
+alias sed='gsed'
+
+stack="${1}"
+
+mkdir -p "/var/www/html/${stack}"
+
+cp {example.env,example.stack.yml} "/var/www/html/${stack}"
+
+cd "/var/www/html/${stack}"
+
+# if the .env file doesn't already exist, copy the example and do replacements
+[[ -f ".env" ]] || {
+  cp example.env ".env"
+  root_password="$(openssl rand -hex 40)"
+  user_password="$(openssl rand -hex 40)"
+  read -r -p "Enter APP value: " app_value
+  read -r -p "Enter DOMAIN value: " domain_value
+
+  ls -alih
+
+  # Detect GNU vs BSD sed and set the right -i form
+  if sed --version >/dev/null 2>&1; then
+    SED_INPLACE=(-i);
+  else
+    SED_INPLACE=(-i ''); 
+  fi
+
+  sed "${SED_INPLACE[@]}" \
+    -e "s/REPLACE_APP/${app_value}/g" \
+    -e "s/REPLACE_DOMAIN/${domain_value}/g" \
+    -e "s/REPLACE_PASSWORD/${user_password}/g" \
+    -e "s/REPLACE_ROOT_PASSWORD/${root_password}/g" \
+    .env
+}
+
+[[ -f "stack.yml" ]] || {
+  cp example.stack.yml "stack.yml"
+}
+
+rm {example.env,example.stack.yml}
