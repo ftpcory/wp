@@ -7,14 +7,6 @@ x-logging: &logging
       max-file: "1"
 
 services:
-  front:
-    <<: *logging
-    image: ghcr.io/ftpcory/docker-wordpress:front
-    depends_on:
-      - web
-    volumes:
-      - wordpress:/var/www/html
-
   cron:
     <<: *logging
     image: ghcr.io/ftpcory/docker-wordpress:cron
