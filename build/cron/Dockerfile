@@ -11,7 +11,6 @@ COPY dotfiles/.* /root/
 COPY scripts/* /usr/local/bin
 
 USER www-data
-RUN crontab /app/cron-wordpress
 
 WORKDIR /app
 
