@@ -1,4 +1,4 @@
-FROM ghcr.io/ftpcory/docker-php-cli:7.4.x-dev
+FROM 8.4-cli
 MAINTAINER corycollier@corycollier.com
 
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
