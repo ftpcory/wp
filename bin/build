@@ -1,4 +1,24 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Branch can be passed as $1, or taken from GITHUB_REF_NAME, else "latest"
+raw_branch="${1:-${GITHUB_REF_NAME:-latest}}"
+
+slugify() {
+  local s="$1"
+  s="$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]')"         # lowercase
+  s="$(printf '%s' "$s" | sed -E 's/[^a-z0-9]+/-/g')"          # non-alnum -> -
+  s="$(printf '%s' "$s" | sed -E 's/^-+|-+$//g')"              # trim leading/trailing -
+  s="$(printf '%s' "$s" | sed -E 's/-{2,}/-/g')"               # collapse ---
+  printf '%s' "$s"
+}
+
+case "$raw_branch" in
+  main)    tag="stable" ;;
+  develop) tag="latest" ;;
+  *)       tag="$(slugify "$raw_branch")" ;;
+esac
+
+echo "Raw branch: ${raw_branch} -> Tag: ${tag}"
 
 docker context use default
 
@@ -7,17 +27,11 @@ root="$(pwd)"
 # build the cron
 cd "${root}/build/cron"
 pwd
-docker build --rm -t ghcr.io/ftpcory/docker-wordpress:cron .
-docker push ghcr.io/ftpcory/docker-wordpress:cron
+docker build --rm -t "ghcr.io/ftpcory/wp-cron:${branch}" .
+docker push "ghcr.io/ftpcory/wp-cron:${branch}"
 
 # build the application servers
 cd "${root}/build/web"
 pwd
-docker build --rm -t ghcr.io/ftpcory/docker-wordpress:web .
-docker push ghcr.io/ftpcory/docker-wordpress:web
-
-# build the front end
-cd "${root}/build/front"
-pwd
-docker build --rm -t ghcr.io/ftpcory/docker-wordpress:front .
-docker push ghcr.io/ftpcory/docker-wordpress:front
+docker build --rm -t "ghcr.io/ftpcory/wp-web:${branch}" .
+docker push "ghcr.io/ftpcory/wp-web:${branch}"
