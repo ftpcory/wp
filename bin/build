@@ -1,37 +1,56 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# Branch can be passed as $1, or taken from GITHUB_REF_NAME, else "latest"
-raw_branch="${1:-${GITHUB_REF_NAME:-latest}}"
+raw_ref="${1:-${GITHUB_REF_NAME:-}}"
+
+# Fallbacks for cron/schedule where ref_name may be empty
+if [[ -z "${raw_ref}" && -n "${GITHUB_REF:-}" ]]; then
+  # Extract name from refs/heads/main or refs/tags/v1.2.3
+  raw_ref="${GITHUB_REF##*/}"
+fi
+if [[ -z "${raw_ref}" ]]; then
+  raw_ref="develop"
+fi
 
 slugify() {
   local s="$1"
-  s="$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]')"         # lowercase
-  s="$(printf '%s' "$s" | sed -E 's/[^a-z0-9]+/-/g')"          # non-alnum -> -
-  s="$(printf '%s' "$s" | sed -E 's/^-+|-+$//g')"              # trim leading/trailing -
-  s="$(printf '%s' "$s" | sed -E 's/-{2,}/-/g')"               # collapse ---
+  # lowercase
+  s="$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]')"
+  # replace anything not [a-z0-9._-] with '-'
+  s="$(printf '%s' "$s" | sed -E 's/[^a-z0-9._-]+/-/g')"
+  # collapse multiple '-'
+  s="$(printf '%s' "$s" | sed -E 's/-{2,}/-/g')"
+  # trim leading/trailing punctuation
+  s="$(printf '%s' "$s" | sed -E 's/^[-._]+//; s/[-._]+$//')"
+  # enforce max length for safety
+  s="${s:0:120}"
+  # ensure not empty
+  if [[ -z "$s" ]]; then s="latest"; fi
   printf '%s' "$s"
 }
 
-case "$raw_branch" in
+# Map branches → tags
+case "$raw_ref" in
   main)    tag="stable" ;;
   develop) tag="latest" ;;
-  *)       tag="$(slugify "$raw_branch")" ;;
+  *)
+    # e.g. release/1.0.0 -> release-1-0-0
+    tag="$(slugify "$raw_ref")"
+    ;;
 esac
 
-echo "Raw branch: ${raw_branch} -> Tag: ${tag}"
+echo "Raw ref: ${raw_ref}  ->  Tag: ${tag}"
 
-docker context use default
+docker context use default >/dev/null
 
 root="$(pwd)"
 
-# build the cron
+# Build + push cron
 cd "${root}/build/cron"
-pwd
-docker build --rm -t "ghcr.io/ftpcory/wp-cron:${branch}" .
-docker push "ghcr.io/ftpcory/wp-cron:${branch}"
+docker build --rm -t "ghcr.io/ftpcory/wp-cron:${tag}" .
+docker push "ghcr.io/ftpcory/wp-cron:${tag}"
 
-# build the application servers
+# Build + push web
 cd "${root}/build/web"
-pwd
-docker build --rm -t "ghcr.io/ftpcory/wp-web:${branch}" .
-docker push "ghcr.io/ftpcory/wp-web:${branch}"
+docker build --rm -t "ghcr.io/ftpcory/wp-web:${tag}" .
+docker push "ghcr.io/ftpcory/wp-web:${tag}"
