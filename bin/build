@@ -1,23 +1,56 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-docker context use default
+raw_ref="${1:-${GITHUB_REF_NAME:-}}"
+
+# Fallbacks for cron/schedule where ref_name may be empty
+if [[ -z "${raw_ref}" && -n "${GITHUB_REF:-}" ]]; then
+  # Extract name from refs/heads/main or refs/tags/v1.2.3
+  raw_ref="${GITHUB_REF##*/}"
+fi
+if [[ -z "${raw_ref}" ]]; then
+  raw_ref="develop"
+fi
+
+slugify() {
+  local s="$1"
+  # lowercase
+  s="$(printf '%s' "$s" | tr '[:upper:]' '[:lower:]')"
+  # replace anything not [a-z0-9._-] with '-'
+  s="$(printf '%s' "$s" | sed -E 's/[^a-z0-9._-]+/-/g')"
+  # collapse multiple '-'
+  s="$(printf '%s' "$s" | sed -E 's/-{2,}/-/g')"
+  # trim leading/trailing punctuation
+  s="$(printf '%s' "$s" | sed -E 's/^[-._]+//; s/[-._]+$//')"
+  # enforce max length for safety
+  s="${s:0:120}"
+  # ensure not empty
+  if [[ -z "$s" ]]; then s="latest"; fi
+  printf '%s' "$s"
+}
+
+# Map branches → tags
+case "$raw_ref" in
+  main)    tag="stable" ;;
+  develop) tag="latest" ;;
+  *)
+    # e.g. release/1.0.0 -> release-1-0-0
+    tag="$(slugify "$raw_ref")"
+    ;;
+esac
+
+echo "Raw ref: ${raw_ref}  ->  Tag: ${tag}"
+
+docker context use default >/dev/null
 
 root="$(pwd)"
 
-# build the cron
+# Build + push cron
 cd "${root}/build/cron"
-pwd
-docker build --rm -t ghcr.io/ftpcory/docker-wordpress:cron .
-docker push ghcr.io/ftpcory/docker-wordpress:cron
+docker build --rm -t "ghcr.io/ftpcory/wp-cron:${tag}" .
+docker push "ghcr.io/ftpcory/wp-cron:${tag}"
 
-# build the application servers
+# Build + push web
 cd "${root}/build/web"
-pwd
-docker build --rm -t ghcr.io/ftpcory/docker-wordpress:web .
-docker push ghcr.io/ftpcory/docker-wordpress:web
-
-# build the front end
-cd "${root}/build/front"
-pwd
-docker build --rm -t ghcr.io/ftpcory/docker-wordpress:front .
-docker push ghcr.io/ftpcory/docker-wordpress:front
+docker build --rm -t "ghcr.io/ftpcory/wp-web:${tag}" .
+docker push "ghcr.io/ftpcory/wp-web:${tag}"
