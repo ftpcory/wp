@@ -1,4 +1,4 @@
-FROM wordpress:latest
+FROM wordpress:5.5.0
 MAINTAINER corycollier@corycollier.com
 
 RUN apt update -y \
