@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 0 * * *'
   push:
-    branches: [ main, develop, release/* ]
+    branches: [ main, develop, release/*, 74x ]
     tags: [ '*.*.*' ]
   pull_request:
     branches: [ main, develop ]

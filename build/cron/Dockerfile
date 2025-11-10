@@ -1,4 +1,4 @@
-FROM php:8.4-cli
+FROM php:7.4-cli
 LABEL org.opencontainers.image.authors="corycollier@corycollier.com"
 
 RUN apt -y update && \

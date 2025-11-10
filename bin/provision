@@ -14,8 +14,6 @@ cd "/var/www/html/${stack}"
   user_password="$(openssl rand -hex 40)"
   read -r -p "Enter APP value: " app_value
 
-  ls -alih
-
   # Detect GNU vs BSD sed and set the right -i form
   if sed --version >/dev/null 2>&1; then
     SED_INPLACE=(-i);
