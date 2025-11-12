@@ -13,6 +13,7 @@ RUN apt -y update && \
         less \
         sudo \
         wget \
+        rsync \
         unzip \
         groff \
         gnupg2 \
