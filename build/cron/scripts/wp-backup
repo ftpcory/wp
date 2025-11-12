@@ -1,7 +1,7 @@
 #!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
-name="$(date +%F)"
+name="$(date +%s)"
 
 dest="/var/backups/${name}"
 
@@ -21,7 +21,7 @@ rm -rf "${dest}"
 find /var/backups -maxdepth 1 -name '*.gz' -mtime +14 -exec rm -f {} \;
 
 aws s3api put-object \
-  --bucket trashpanties \
-  --key "tp-${stack}/backups/${name}.tar.gz" \
+  --bucket "${AWS_S3_BUCKET}" \
+  --key "tp-${APP}/backups/${name}.tar.gz" \
   --body "/var/backups/${name}.tar.gz" \
   --tagging "cold-backup=true&customer=${stack}"
