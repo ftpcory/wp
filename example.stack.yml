@@ -78,7 +78,7 @@ services:
       - net
     volumes:
       - backups:/var/backups/
-      - wp_data:/var/www/html
+      - wp_data:/app
     deploy:
       restart_policy:
         condition: on-failure
