@@ -85,4 +85,5 @@ USER www-data
 
 WORKDIR /app
 
+USER root
 CMD cron -f
